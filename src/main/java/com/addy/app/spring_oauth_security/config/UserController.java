@@ -1,16 +1,17 @@
 package com.addy.app.spring_oauth_security.config;
 
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.addy.app.spring_oauth_security.model.User;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
-import java.util.StringJoiner;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.joining;
@@ -24,7 +25,7 @@ public class UserController {
         this.jwtEncoder = jwtEncoder;
     }
 
-    @GetMapping("/auth")
+    @PostMapping("/auth")
     public JWTResponse auth(Authentication authentication) {
 
         return new JWTResponse(createToken(authentication));
@@ -33,16 +34,18 @@ public class UserController {
 
 
     @GetMapping("/user")
-//    @PreAuthorize("hasRole('USER')")
-    public Authentication user(Authentication authentication) {
-
-        return authentication;
+    public User user() {
+        return new User("addy", "pass");
     }
     @GetMapping("/admin")
-//    @PreAuthorize("hasRole('ADMIN')")
-    public Authentication admin(Authentication authentication) {
+    public User admin () {
 
-        return authentication;
+        return new User("admin", "pass");
+    }
+
+    @PostMapping("/user")
+    public User createUser(User user) {
+        return user;
     }
 
     private String createToken(Authentication authentication) {
@@ -50,7 +53,7 @@ public class UserController {
                 .subject(authentication.getName())
                 .claim("scope", createClaims(authentication))
                 .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
+                .expiresAt(Instant.now().plusSeconds(120))
                 .issuer("self")
                 .build();
 
@@ -58,8 +61,11 @@ public class UserController {
         return jwtEncoder.encode(params).getTokenValue();
     }
 
-    private String createClaims(Authentication authentication) {
-       return authentication.getAuthorities().toString();
+    private List<String> createClaims(Authentication authentication) {
+       return authentication.getAuthorities()
+               .stream()
+               .map(GrantedAuthority::getAuthority)
+               .collect(Collectors.toList());
     }
 
 
